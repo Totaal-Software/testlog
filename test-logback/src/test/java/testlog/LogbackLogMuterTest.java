@@ -89,11 +89,6 @@ public class LogbackLogMuterTest {
     private void assertLogIsNotMuted() {
         int currentCount = counter;
         logger.info("log statement");
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         assertEquals(currentCount + 1, counter);
     }
 

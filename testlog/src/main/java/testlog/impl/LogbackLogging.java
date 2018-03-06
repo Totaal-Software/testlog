@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.AppenderBase;
+import ch.qos.logback.core.Context;
 import ch.qos.logback.core.helpers.NOPAppender;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -31,7 +32,7 @@ class LogbackLogging implements Logging {
     public void mute() {
         Logger rootLogger = getRootLogger();
         saveAppenders(rootLogger);
-        rootLogger.addAppender(new NOPAppender<>());
+        rootLogger.addAppender(getNopAppender());
     }
 
     @Override
@@ -71,6 +72,12 @@ class LogbackLogging implements Logging {
             return Level.TRACE;
         }
         throw new RuntimeException(format("level %s is not supported", level));
+    }
+
+    private Appender<ILoggingEvent> getNopAppender() {
+        NOPAppender<ILoggingEvent> appender = new NOPAppender<>();
+        appender.setContext((Context) LoggerFactory.getILoggerFactory());
+        return appender;
     }
 
     private Logger getRootLogger() {
