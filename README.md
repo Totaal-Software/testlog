@@ -1,5 +1,7 @@
 # testlog
 
+[![Build Status](https://travis-ci.org/Totaal-Software/testlog.svg?branch=master)](https://travis-ci.org/Totaal-Software/testlog)
+
 Library to interact with logging in JUnit tests.
 
 ## Requirements
