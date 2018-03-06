@@ -2,7 +2,10 @@
 
 [![Build Status](https://travis-ci.org/Totaal-Software/testlog.svg?branch=master)](https://travis-ci.org/Totaal-Software/testlog)
 
-Library to interact with logging in JUnit tests.
+Library to interact with logging in JUnit tests. Some main concepts are:
+
+- Muting: make log entirely silent
+- Assertions: assert that the log only contains specified messages of a given level
 
 ## Requirements
 

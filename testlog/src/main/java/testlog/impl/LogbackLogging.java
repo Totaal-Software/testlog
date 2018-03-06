@@ -50,13 +50,7 @@ class LogbackLogging implements Logging {
     }
 
     private Appender<ILoggingEvent> buildAppender(LogCallback logCallback) {
-        return new AppenderBase<ILoggingEvent>() {
-            @Override
-            protected void append(ILoggingEvent event) {
-                //todo: throwable something
-                logCallback.log(convertLevel(event.getLevel()), event.getFormattedMessage(), null);
-            }
-        };
+        return new CallbackAppender(logCallback);
     }
 
     private Level convertLevel(ch.qos.logback.classic.Level level) {
@@ -97,6 +91,22 @@ class LogbackLogging implements Logging {
             Appender<ILoggingEvent> appender = allAppenders.next();
             savedAppenders.add(appender);
             rootLogger.detachAppender(appender);
+        }
+    }
+
+    private class CallbackAppender extends AppenderBase<ILoggingEvent> {
+        private final LogCallback logCallback;
+
+        public CallbackAppender(LogCallback logCallback) {
+            this.logCallback = logCallback;
+            this.started = true;
+            setContext((Context) LoggerFactory.getILoggerFactory());
+        }
+
+        @Override
+        protected void append(ILoggingEvent event) {
+            //todo: throwable something
+            logCallback.log(convertLevel(event.getLevel()), event.getFormattedMessage(), null);
         }
     }
 }

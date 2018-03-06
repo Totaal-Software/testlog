@@ -1,22 +1,31 @@
 package testlog;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import testlog.impl.LogCallback;
 import testlog.impl.Logging;
 import testlog.impl.LoggingFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 /**
  * Track the log and assert if a log occurs from a given level or higher. Meant to be used during unit tests
  */
 public class LogAsserter implements LogCallback, Closeable {
+    private static final long MAXIMUM_TIME_OUT = 5_000;
+
+    private static final Logger logger = LoggerFactory.getLogger(LogAsserter.class);
+
+    private AssertionError assertionError;
+
     private List<Level> expectations = new ArrayList<>();
 
     private final Logging logging;
@@ -45,7 +54,7 @@ public class LogAsserter implements LogCallback, Closeable {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         tearDown();
     }
 
@@ -58,19 +67,38 @@ public class LogAsserter implements LogCallback, Closeable {
         expectations.add(level);
     }
 
+    /**
+     * Expect log events of the given levels.
+     *
+     * @param levels log event levels to expect
+     */
+    public void expect(Level... levels) {
+        expectations.addAll(asList(levels));
+    }
+
     public Logging getDelegate() {
         return logging;
     }
 
     @Override
     public void log(Level level, String message, Throwable throwable) {
-        if (expectations.size() >= 1 && expectations.remove(0).equals(level)) {
+        if (assertionError != null) {
+            // failed already, never mind any further
             return;
         }
-        if (level.toInt() >= minimumLevel.toInt()) {
-            String error = format("Unexpected %s. Log: %s", level, "");
-            throw new AssertionError(error, throwable);
+
+        if (level.toInt() < minimumLevel.toInt()) {
+            return;
         }
+
+        if (matchesNextExpectation(level, message, throwable)) {
+            logInfoIfBelowMinimumLevel("allowed log at level %s: %s", level, message);
+            return;
+        }
+
+        assertUnexpectedLogging(level, message, throwable);
+        removeLaterExpectationForEfficiency(level, message, throwable);
+        notify(); // see the wait in tearDown
     }
 
     /**
@@ -78,6 +106,75 @@ public class LogAsserter implements LogCallback, Closeable {
      * since the logging infrastructure may be static
      */
     public void tearDown() {
-        logging.deregisterCallback(this);
+        try {
+            if (!expectations.isEmpty()) {
+                try {
+                    // wait for expectations, else they may bleed into the next test
+                    // this is probably only true with something asynchronous in the chain
+                    synchronized (this) {
+                        wait(MAXIMUM_TIME_OUT);
+                    }
+                    if (assertionError == null) {
+                        assertExpectationsIsEmptyAfterWait();
+                    }
+                } catch (InterruptedException exception) {
+                    throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
+                }
+            }
+            throwPreparedAssertionError();
+        } finally {
+            logging.deregisterCallback(this);
+        }
+    }
+
+    private void assertExpectationsIsEmptyAfterWait() {
+        if (!expectations.isEmpty()) {
+            String format = "%d expected log entries did not occur after waiting %dms: %s";
+            throw new AssertionError(format(format, expectations.size(), MAXIMUM_TIME_OUT, expectations));
+        }
+    }
+
+    private void assertUnexpectedLogging(Level level, String message, Throwable throwable) {
+        String exceptionMessage = format("Unexpected %s log during test execution: %s", level, message);
+        if (throwable != null) {
+            exceptionMessage += format("; throwable: %s", throwable);
+        }
+        assertionError = new AssertionError(exceptionMessage);
+    }
+
+    private void logInfoIfBelowMinimumLevel(String format, Object... args) {
+        if (Level.INFO.toInt() < minimumLevel.toInt()) {
+            logger.info(format(format, args));
+        }
+    }
+
+    private boolean matchesExpectation(int index, Level expected) {
+        Level actual = expectations.remove(index);
+        return matchesExpectation(expected, actual);
+    }
+
+    private boolean matchesExpectation(Level expected, Level actual) {
+        return actual.equals(expected);
+    }
+
+    private boolean matchesNextExpectation(Level level, String message, Throwable throwable) {
+        return !expectations.isEmpty() && matchesExpectation(0, level);
+    }
+
+    private void removeLaterExpectationForEfficiency(Level expected, String message, Throwable throwable) {
+        Iterator<Level> iterator = expectations.iterator();
+        while (iterator.hasNext()) {
+            Level actual = iterator.next();
+            if (matchesExpectation(expected, actual)) {
+                iterator.remove();
+                return;
+            }
+        }
+    }
+
+    private void throwPreparedAssertionError() {
+        if (assertionError != null) {
+            throw assertionError;
+        }
     }
 }
