@@ -1,3 +1,3 @@
 language: java
-after_success:
+after_script:
   - mvn coveralls:report -D jacocoReports=./jacoco/target/site/jacoco-aggregate/jacoco.xml
