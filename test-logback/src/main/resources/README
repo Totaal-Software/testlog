@@ -1,0 +1,2 @@
+This module only exists for testing, there's no main content. It will produce an empty JAR file, and should not be
+deployed.

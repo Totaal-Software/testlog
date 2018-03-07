@@ -12,8 +12,9 @@
     <version>1.0.0-SNAPSHOT</version>
     <name>${project.artifactId}</name>
     <description>JaCoCo log aggregation</description>
+    <packaging>pom</packaging>
     <properties>
-        <maven.install.skip>true</maven.install.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
     <dependencies>
         <dependency>
@@ -24,11 +25,13 @@
             <groupId>com.totaalsoftware.testlog</groupId>
             <artifactId>test-logback</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.totaalsoftware.testlog</groupId>
             <artifactId>test-log4j</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -44,9 +47,6 @@
                         <goals>
                             <goal>report-aggregate</goal>
                         </goals>
-                        <configuration>
-                            <skip>${skipTests}</skip>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
