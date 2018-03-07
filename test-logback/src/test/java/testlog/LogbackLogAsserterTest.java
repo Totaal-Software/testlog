@@ -2,6 +2,7 @@ package testlog;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,15 +23,24 @@ import static org.junit.Assert.fail;
 public class LogbackLogAsserterTest {
     private static final Logger logger = LoggerFactory.getLogger(LoggingFactoryTest.class);
 
+    @Before
+    public void setUp() {
+        enableTraceLogging();
+    }
+
     @Test
     public void testCloseWithUnexpectedLog() {
+        boolean fail = false;
         try {
             try (LogAsserter ignored = LogAsserter.setUpLogAsserter(Level.WARN)) {
                 logger.error("error statement");
             }
-            fail("expected an exception for the unexpected log");
+            fail = true;
         } catch (AssertionError exception) {
             assertEquals("Unexpected ERROR log during test execution: error statement", exception.getMessage());
+        }
+        if (fail) {
+            fail("expected an exception for the unexpected log");
         }
     }
 
@@ -84,19 +94,24 @@ public class LogbackLogAsserterTest {
 
     @Test
     public void testExpectedErrorNotOccurred() {
+        boolean fail = false;
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         try {
             subject.tearDown();
-            fail("expected an exception for the expected log that did not occur");
+            fail = true;
         } catch (AssertionError exception) {
             assertEquals(
                     "1 expected log entries did not occur after waiting 5000ms: [ERROR]", exception.getMessage());
+        }
+        if (fail) {
+            fail("expected an exception for the unexpected log");
         }
     }
 
     @Test
     public void testExpectedErrorsNotOccurred() {
+        boolean fail = false;
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
@@ -104,10 +119,13 @@ public class LogbackLogAsserterTest {
         logger.error("error statement");
         try {
             subject.tearDown();
-            fail("expected an exception for the expected log that did not occur");
+            fail = true;
         } catch (AssertionError exception) {
             assertEquals(
                     "2 expected log entries did not occur after waiting 5000ms: [WARN, ERROR]", exception.getMessage());
+        }
+        if (fail) {
+            fail("expected an exception for the expected log that did not occur");
         }
     }
 
@@ -213,11 +231,50 @@ public class LogbackLogAsserterTest {
     }
 
     @Test
+    public void testUnexpectedDebug() throws InterruptedException {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.DEBUG);
+        logger.debug("debug statement");
+
+        validateException(subject, "Unexpected DEBUG log during test execution: debug statement");
+    }
+
+    @Test
     public void testUnexpectedError() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         logger.error("error statement");
 
         validateException(subject, "Unexpected ERROR log during test execution: error statement");
+    }
+
+    @Test
+    public void testUnexpectedErrorComingLate() throws InterruptedException {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        subject.expect(Level.ERROR);
+        subject.expect(Level.ERROR);
+
+        final Throwable[] caught = new Throwable[1];
+        Thread testThread = new Thread(() -> {
+            try {
+                subject.tearDown();
+            } catch (Throwable throwable) {
+                caught[0] = throwable;
+            }
+        });
+        testThread.start();
+
+        sleep(750);
+        Thread logThread = new Thread(() -> {
+            logger.warn("warn statement");
+            logger.error("error statement");
+        });
+        logThread.start();
+
+        testThread.join();
+        logThread.join();
+
+        assertNotNull(caught[0]);
+        assertEquals(AssertionError.class, caught[0].getClass());
+        assertEquals("Unexpected WARN log during test execution: warn statement", caught[0].getMessage());
     }
 
     @Test
@@ -240,6 +297,14 @@ public class LogbackLogAsserterTest {
     }
 
     @Test
+    public void testUnexpectedInfo() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.INFO);
+        logger.info("info statement");
+
+        validateException(subject, "Unexpected INFO log during test execution: info statement");
+    }
+
+    @Test
     public void testUnexpectedMultipleErrors() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         logger.error("error statement 1");
@@ -247,6 +312,22 @@ public class LogbackLogAsserterTest {
 
         // make sure we're asserting the first unexpected error, not the second
         validateException(subject, "Unexpected ERROR log during test execution: error statement 1");
+    }
+
+    @Test
+    public void testUnexpectedTrace() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.TRACE);
+        logger.trace("trace statement");
+
+        validateException(subject, "Unexpected TRACE log during test execution: trace statement");
+    }
+
+    @Test
+    public void testUnexpectedWarning() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        logger.warn("warn statement");
+
+        validateException(subject, "Unexpected WARN log during test execution: warn statement");
     }
 
     @Test
@@ -267,12 +348,22 @@ public class LogbackLogAsserterTest {
         subject.tearDown();
     }
 
+    private void enableTraceLogging() {
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(
+                ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+        root.setLevel(ch.qos.logback.classic.Level.TRACE);
+    }
+
     private void validateException(LogAsserter subject, String expected) {
+        boolean fail = false;
         try {
             subject.tearDown();
-            fail("expected an exception for the unexpected log");
+            fail = true;
         } catch (AssertionError exception) {
             assertEquals(expected, exception.getMessage());
+        }
+        if (fail) {
+            fail("expected an exception for the unexpected log");
         }
     }
 

@@ -48,6 +48,46 @@ public class LogbackLogMuterTest {
     }
 
     @Test
+    public void testEnableOutput() {
+        assertLogIsNotMuted();
+
+        LogMuter subject = LogMuter.setupLogMuter();
+        assertLogIsMuted();
+
+        subject.enableOutput();
+        assertLogIsNotMuted();
+
+        subject.tearDown();
+    }
+
+    @Test
+    public void testRedundantMute() {
+        assertLogIsNotMuted();
+
+        LogMuter subject = LogMuter.setupLogMuter();
+        assertLogIsMuted();
+
+        subject.disableOutput();
+        assertLogIsMuted();
+
+        subject.tearDown();
+    }
+
+    @Test
+    public void testRedundantUnmute() {
+        assertLogIsNotMuted();
+
+        LogMuter subject = LogMuter.setupLogMuter();
+        subject.enableOutput();
+        assertLogIsNotMuted();
+
+        subject.enableOutput();
+        assertLogIsNotMuted();
+
+        subject.tearDown();
+    }
+
+    @Test
     public void testSetupLogMuter() {
         assertLogIsNotMuted();
 
