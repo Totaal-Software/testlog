@@ -2,6 +2,7 @@ package testlog.impl;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.Context;
@@ -105,8 +106,9 @@ class LogbackLogging implements Logging {
 
         @Override
         protected void append(ILoggingEvent event) {
-            //todo: throwable something
-            logCallback.log(convertLevel(event.getLevel()), event.getFormattedMessage(), null);
+            ThrowableProxy throwableProxy = (ThrowableProxy) event.getThrowableProxy();
+            Throwable throwable = throwableProxy == null ? null : throwableProxy.getThrowable();
+            logCallback.log(convertLevel(event.getLevel()), event.getFormattedMessage(), throwable);
         }
     }
 }

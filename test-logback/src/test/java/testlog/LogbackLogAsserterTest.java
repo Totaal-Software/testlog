@@ -8,11 +8,15 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import testlog.impl.Logging;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.Thread.sleep;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 public class LogbackLogAsserterTest {
@@ -54,6 +58,60 @@ public class LogbackLogAsserterTest {
     }
 
     @Test
+    public void testExpectedErrorComingLate() throws InterruptedException {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        subject.expect(Level.ERROR);
+
+        final Throwable[] caught = new Throwable[1];
+        Thread testThread = new Thread(() -> {
+            try {
+                subject.tearDown();
+            } catch (Throwable throwable) {
+                caught[0] = throwable;
+            }
+        });
+        testThread.start();
+
+        sleep(750);
+        Thread logThread = new Thread(() -> logger.error("error statement"));
+        logThread.start();
+
+        testThread.join();
+        logThread.join();
+
+        assertNull(caught[0]);
+    }
+
+    @Test
+    public void testExpectedErrorNotOccurred() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        subject.expect(Level.ERROR);
+        try {
+            subject.tearDown();
+            fail("expected an exception for the expected log that did not occur");
+        } catch (AssertionError exception) {
+            assertEquals(
+                    "1 expected log entries did not occur after waiting 5000ms: [ERROR]", exception.getMessage());
+        }
+    }
+
+    @Test
+    public void testExpectedErrorsNotOccurred() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        subject.expect(Level.ERROR);
+        subject.expect(Level.WARN);
+        subject.expect(Level.ERROR);
+        logger.error("error statement");
+        try {
+            subject.tearDown();
+            fail("expected an exception for the expected log that did not occur");
+        } catch (AssertionError exception) {
+            assertEquals(
+                    "2 expected log entries did not occur after waiting 5000ms: [WARN, ERROR]", exception.getMessage());
+        }
+    }
+
+    @Test
     public void testExpectedTwoLogs() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR, Level.WARN);
@@ -66,8 +124,10 @@ public class LogbackLogAsserterTest {
     public void testExpectedTwoLogsWrongOrder() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
+        subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
         logger.warn("warn statement");
+        logger.error("error statement");
         logger.error("error statement");
 
         validateException(subject, "Unexpected WARN log during test execution: warn statement");
@@ -128,6 +188,31 @@ public class LogbackLogAsserterTest {
     }
 
     @Test
+    public void testTearDownInterrupted() throws InterruptedException {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        subject.expect(Level.ERROR);
+
+        final Throwable[] caught = new Throwable[1];
+        Thread testThread = new Thread(() -> {
+            try {
+                subject.tearDown();
+            } catch (Throwable throwable) {
+                caught[0] = throwable;
+            }
+        });
+        testThread.start();
+
+        sleep(750);
+        testThread.interrupt();
+
+        testThread.join();
+
+        assertNotNull(caught[0]);
+        assertEquals(Error.class, caught[0].getClass());
+        assertEquals("waiting for expected log entries got interrupted: [ERROR]", caught[0].getMessage());
+    }
+
+    @Test
     public void testUnexpectedError() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         logger.error("error statement");
@@ -143,6 +228,15 @@ public class LogbackLogAsserterTest {
         logger.error("error statement 2");
 
         validateException(subject, "Unexpected ERROR log during test execution: error statement 2");
+    }
+
+    @Test
+    public void testUnexpectedErrorWithException() {
+        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        logger.error("error statement", new IOException("something"));
+
+        validateException(subject, "Unexpected ERROR log during test execution: error statement; " +
+                "throwable: java.io.IOException: something");
     }
 
     @Test

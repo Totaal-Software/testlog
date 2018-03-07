@@ -82,23 +82,22 @@ public class LogAsserter implements LogCallback, Closeable {
 
     @Override
     public void log(Level level, String message, Throwable throwable) {
-        if (assertionError != null) {
-            // failed already, never mind any further
-            return;
-        }
-
         if (level.toInt() < minimumLevel.toInt()) {
             return;
         }
 
         if (matchesNextExpectation(level, message, throwable)) {
             logInfoIfBelowMinimumLevel("allowed log at level %s: %s", level, message);
+            synchronized (this) {
+                notify(); // see the wait in tearDown
+            }
             return;
         }
 
-        assertUnexpectedLogging(level, message, throwable);
+        if (assertionError == null) {
+            assertUnexpectedLogging(level, message, throwable);
+        }
         removeLaterExpectationForEfficiency(level, message, throwable);
-        notify(); // see the wait in tearDown
     }
 
     /**
@@ -148,17 +147,17 @@ public class LogAsserter implements LogCallback, Closeable {
         }
     }
 
-    private boolean matchesExpectation(int index, Level expected) {
-        Level actual = expectations.remove(index);
-        return matchesExpectation(expected, actual);
-    }
-
     private boolean matchesExpectation(Level expected, Level actual) {
         return actual.equals(expected);
     }
 
+    private boolean matchesNextExpectation(Level expected) {
+        Level actual = expectations.remove(0);
+        return matchesExpectation(expected, actual);
+    }
+
     private boolean matchesNextExpectation(Level level, String message, Throwable throwable) {
-        return !expectations.isEmpty() && matchesExpectation(0, level);
+        return !expectations.isEmpty() && matchesNextExpectation(level);
     }
 
     private void removeLaterExpectationForEfficiency(Level expected, String message, Throwable throwable) {
