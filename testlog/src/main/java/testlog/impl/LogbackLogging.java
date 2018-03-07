@@ -8,15 +8,12 @@ import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.helpers.NOPAppender;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static java.lang.String.format;
 
 class LogbackLogging implements Logging {
     private final Map<LogCallback, Appender<ILoggingEvent>> logCallbacks = new HashMap<>();
@@ -52,21 +49,6 @@ class LogbackLogging implements Logging {
 
     private Appender<ILoggingEvent> buildAppender(LogCallback logCallback) {
         return new CallbackAppender(logCallback);
-    }
-
-    private Level convertLevel(ch.qos.logback.classic.Level level) {
-        if (ch.qos.logback.classic.Level.ERROR.equals(level)) {
-            return Level.ERROR;
-        } else if (ch.qos.logback.classic.Level.WARN.equals(level)) {
-            return Level.WARN;
-        } else if (ch.qos.logback.classic.Level.INFO.equals(level)) {
-            return Level.INFO;
-        } else if (ch.qos.logback.classic.Level.DEBUG.equals(level)) {
-            return Level.DEBUG;
-        } else if (ch.qos.logback.classic.Level.TRACE.equals(level)) {
-            return Level.TRACE;
-        }
-        throw new RuntimeException(format("level %s is not supported", level));
     }
 
     private Appender<ILoggingEvent> getNopAppender() {
@@ -108,7 +90,7 @@ class LogbackLogging implements Logging {
         protected void append(ILoggingEvent event) {
             ThrowableProxy throwableProxy = (ThrowableProxy) event.getThrowableProxy();
             Throwable throwable = throwableProxy == null ? null : throwableProxy.getThrowable();
-            logCallback.log(convertLevel(event.getLevel()), event.getFormattedMessage(), throwable);
+            logCallback.log(LogbackLevelUtil.convertLevel(event.getLevel()), event.getFormattedMessage(), throwable);
         }
     }
 }
