@@ -1,7 +1,7 @@
 package testlog;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.AppenderBase;
+import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.varia.NullAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -20,7 +20,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
-public class LogbackLogAsserterTest {
+public class Log4jLogAsserterTest {
     private static final Logger logger = LoggerFactory.getLogger(LoggingFactoryTest.class);
 
     @Before
@@ -56,7 +56,7 @@ public class LogbackLogAsserterTest {
     public void testDelegate() {
         LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
         Logging actual = subject.getDelegate();
-        assertEquals("LogbackLogging", actual.getClass().getSimpleName());
+        assertEquals("Log4jLogging", actual.getClass().getSimpleName());
     }
 
     @Test
@@ -348,12 +348,12 @@ public class LogbackLogAsserterTest {
         subject.tearDown();
     }
 
-    private static ch.qos.logback.classic.Logger getRootLogger() {
-        return (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+    private static org.apache.log4j.Logger getRootLogger() {
+        return org.apache.log4j.Logger.getRootLogger();
     }
 
     private void enableTraceLogging() {
-        getRootLogger().setLevel(ch.qos.logback.classic.Level.TRACE);
+        getRootLogger().setLevel(org.apache.log4j.Level.TRACE);
     }
 
     private void validateException(LogAsserter subject, String expected) {
@@ -369,15 +369,18 @@ public class LogbackLogAsserterTest {
         }
     }
 
-    private static class CaptureInfoAppender extends AppenderBase<ILoggingEvent> {
+    private static class CaptureInfoAppender extends NullAppender {
         private List<String> messages = new ArrayList<>();
-
-        public CaptureInfoAppender() {
-            started = true;
-        }
 
         public void assertMessages(String... expected) {
             assertEquals(asList(expected), messages);
+        }
+
+        @Override
+        public void doAppend(LoggingEvent eventObject) {
+            if (eventObject.getLevel().equals(org.apache.log4j.Level.INFO)) {
+                messages.add(eventObject.getRenderedMessage());
+            }
         }
 
         public void register() {
@@ -385,14 +388,7 @@ public class LogbackLogAsserterTest {
         }
 
         public void unregister() {
-            getRootLogger().detachAppender(this);
-        }
-
-        @Override
-        protected void append(ILoggingEvent eventObject) {
-            if (eventObject.getLevel().equals(ch.qos.logback.classic.Level.INFO)) {
-                messages.add(eventObject.getMessage());
-            }
+            getRootLogger().removeAppender(this);
         }
     }
 }

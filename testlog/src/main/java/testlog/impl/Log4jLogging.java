@@ -5,7 +5,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.spi.ThrowableInformation;
 import org.apache.log4j.varia.NullAppender;
-import org.slf4j.event.Level;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -53,24 +52,9 @@ class Log4jLogging implements Logging {
             public void doAppend(LoggingEvent event) {
                 ThrowableInformation throwableInformation = event.getThrowableInformation();
                 Throwable throwable = throwableInformation == null ? null : throwableInformation.getThrowable();
-                logCallback.log(convertLevel(event.getLevel()), event.getRenderedMessage(), throwable);
+                logCallback.log(Log4jLevelUtil.convertLevel(event.getLevel()), event.getRenderedMessage(), throwable);
             }
         };
-    }
-
-    private Level convertLevel(org.apache.log4j.Level level) {
-        if (org.apache.log4j.Level.ERROR.equals(level)) {
-            return Level.ERROR;
-        } else if (org.apache.log4j.Level.WARN.equals(level)) {
-            return Level.WARN;
-        } else if (org.apache.log4j.Level.INFO.equals(level)) {
-            return Level.INFO;
-        } else if (org.apache.log4j.Level.DEBUG.equals(level)) {
-            return Level.DEBUG;
-        } else if (org.apache.log4j.Level.TRACE.equals(level)) {
-            return Level.TRACE;
-        }
-        throw new RuntimeException(format("level %s is not supported", level));
     }
 
     private void restoreAppenders(Logger rootLogger) {
