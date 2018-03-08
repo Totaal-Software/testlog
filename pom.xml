@@ -19,6 +19,7 @@
         <module>jacoco</module>
         <module>test-log4j</module>
         <module>test-logback</module>
+        <module>test-shared</module>
         <module>testlog</module>
     </modules>
     <dependencyManagement>
