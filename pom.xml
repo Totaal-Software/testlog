@@ -1,20 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.totaalsoftware.testlog</groupId>
     <artifactId>testlog-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>${project.artifactId}</name>
     <description>Library to interact with logging in JUnit tests (parent project)</description>
-    <packaging>pom</packaging>
-    <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <org.slf4j.version>1.7.25</org.slf4j.version>
-    </properties>
+    <url>https://github.com/Totaal-Software/testlog</url>
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>sander</id>
+            <name>Sander Verhagen</name>
+            <email>sander@sanderverhagen.net</email>
+            <organization>Totaal Software</organization>
+            <organizationUrl>https://www.totaalsoftware.com</organizationUrl>
+            <timezone>America/Los_Angeles</timezone>
+        </developer>
+    </developers>
     <modules>
         <module>jacoco</module>
         <module>test-log4j</module>
@@ -22,6 +31,24 @@
         <module>test-shared</module>
         <module>testlog</module>
     </modules>
+    <scm>
+        <connection>scm:git:git://github.com/Totaal-Software/testlog.git</connection>
+        <developerConnection>scm:git:ssh://github.com:Totaal-Software/testlog.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>http://github.com/Totaal-Software/testlog/tree/master</url>
+    </scm>
+    <issueManagement>
+        <url>https://github.com/Totaal-Software/testlog/issues</url>
+    </issueManagement>
+    <ciManagement>
+        <url>https://travis-ci.org/Totaal-Software/testlog</url>
+    </ciManagement>
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <org.slf4j.version>1.7.25</org.slf4j.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -75,6 +102,37 @@
                 <groupId>org.eluder.coveralls</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
                 <version>4.3.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-source</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadoc</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>verify</phase>
+                        <configuration>
+                            <quiet>true</quiet>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
