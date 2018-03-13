@@ -6,19 +6,12 @@ import org.apache.log4j.varia.NullAppender;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import testlog.impl.Logging;
 
 import static org.junit.Assert.assertEquals;
 
 public class Log4jLogMuterTest extends AbstractLogMuterTest {
-    private Appender testAppender = new NullAppender() {
-        @Override
-        public void doAppend(LoggingEvent event) {
-            incrementLogCounter();
-        }
-    };
+    private Appender testAppender = new AppenderForTest();
 
     @Before
     public void setUp() {
@@ -35,6 +28,13 @@ public class Log4jLogMuterTest extends AbstractLogMuterTest {
         try (LogMuter subject = LogMuter.setupLogMuter()) {
             Logging actual = subject.getDelegate();
             assertEquals("Log4jLogging", actual.getClass().getSimpleName());
+        }
+    }
+
+    private class AppenderForTest extends NullAppender {
+        @Override
+        public void doAppend(LoggingEvent event) {
+            incrementLogCounter();
         }
     }
 }

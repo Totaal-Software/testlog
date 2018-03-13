@@ -15,13 +15,24 @@ import static org.junit.Assert.assertEquals;
 public class Log4jLogAsserterTest extends AbstractLogAsserterTest {
     @Test
     public void testDelegate() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
-        Logging actual = subject.getDelegate();
-        assertEquals("Log4jLogging", actual.getClass().getSimpleName());
+        try (LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN)) {
+            Logging actual = subject.getDelegate();
+            assertEquals("Log4jLogging", actual.getClass().getSimpleName());
+        }
     }
 
     private static org.apache.log4j.Logger getRootLogger() {
         return org.apache.log4j.Logger.getRootLogger();
+    }
+
+    @Override
+    protected LogAsserter callLogAsserterConstructor(Level level) {
+        return new LogAsserter(level);
+    }
+
+    @Override
+    protected LogAsserter callSubjectSetUpLogAsserter(Level level) {
+        return LogAsserter.setUpLogAsserter(level);
     }
 
     @Override

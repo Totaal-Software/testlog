@@ -26,7 +26,7 @@ public abstract class AbstractLogAsserterTest {
     public void testCloseWithUnexpectedLog() {
         boolean fail = false;
         try {
-            try (LogAsserter ignored = LogAsserter.setUpLogAsserter(Level.WARN)) {
+            try (LogAsserter ignored = callSubjectSetUpLogAsserter(Level.WARN)) {
                 logger.error("error statement");
             }
             fail = true;
@@ -40,7 +40,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testCloseWithoutUnexpectedLog() {
-        try (LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN)) {
+        try (LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN)) {
             subject.expect(Level.ERROR);
             logger.error("error statement");
         }
@@ -48,7 +48,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedError() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         logger.error("error statement");
         subject.tearDown();
@@ -56,7 +56,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedErrorComingLate() throws InterruptedException {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
 
         final Throwable[] caught = new Throwable[1];
@@ -82,7 +82,7 @@ public abstract class AbstractLogAsserterTest {
     @Test
     public void testExpectedErrorNotOccurred() {
         boolean fail = false;
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         try {
             subject.tearDown();
@@ -99,7 +99,7 @@ public abstract class AbstractLogAsserterTest {
     @Test
     public void testExpectedErrorsNotOccurred() {
         boolean fail = false;
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
         subject.expect(Level.ERROR);
@@ -118,7 +118,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedTwoLogs() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR, Level.WARN);
         logger.error("error statement");
         logger.warn("warn statement");
@@ -127,7 +127,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedTwoLogsWrongOrder() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
@@ -140,7 +140,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedTwoSeparateLogs() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
         logger.error("error statement");
@@ -152,7 +152,7 @@ public abstract class AbstractLogAsserterTest {
     public void testLogInfoForExpectedLog() {
         CaptureInfoAppender appender = registerAppender();
 
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         logger.error("error statement");
 
@@ -165,7 +165,7 @@ public abstract class AbstractLogAsserterTest {
     public void testNoLogInfoForExpectedLog() {
         CaptureInfoAppender appender = registerAppender();
 
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.INFO);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.INFO);
         subject.expect(Level.ERROR);
         logger.error("error statement");
 
@@ -176,7 +176,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testNoUnexpectedErrors() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.ERROR);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.ERROR);
         logger.warn("warn statement");
 
         subject.tearDown();
@@ -184,7 +184,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testNoUnexpectedWarnings() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.info("info statement");
 
         subject.tearDown();
@@ -192,7 +192,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testTearDownInterrupted() throws InterruptedException {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
 
         final Throwable[] caught = new Throwable[1];
@@ -216,8 +216,8 @@ public abstract class AbstractLogAsserterTest {
     }
 
     @Test
-    public void testUnexpectedDebug() throws InterruptedException {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.DEBUG);
+    public void testUnexpectedDebug() {
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.DEBUG);
         logger.debug("debug statement");
 
         validateException(subject, "Unexpected DEBUG log during test execution: debug statement");
@@ -225,7 +225,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedError() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.error("error statement");
 
         validateException(subject, "Unexpected ERROR log during test execution: error statement");
@@ -233,7 +233,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedErrorComingLate() throws InterruptedException {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.ERROR);
 
@@ -264,7 +264,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedErrorNotFirst() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         logger.error("error statement 1");
         logger.error("error statement 2");
@@ -274,7 +274,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedErrorWithException() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.error("error statement", new IOException("something"));
 
         validateException(subject, "Unexpected ERROR log during test execution: error statement; " +
@@ -283,7 +283,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedInfo() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.INFO);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.INFO);
         logger.info("info statement");
 
         validateException(subject, "Unexpected INFO log during test execution: info statement");
@@ -291,7 +291,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedMultipleErrors() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.error("error statement 1");
         logger.error("error statement 2");
 
@@ -301,7 +301,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedTrace() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.TRACE);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.TRACE);
         logger.trace("trace statement");
 
         validateException(subject, "Unexpected TRACE log during test execution: trace statement");
@@ -309,7 +309,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUnexpectedWarning() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.warn("warn statement");
 
         validateException(subject, "Unexpected WARN log during test execution: warn statement");
@@ -317,7 +317,7 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testUseConstructor() {
-        LogAsserter subject = new LogAsserter(Level.WARN);
+        LogAsserter subject = callLogAsserterConstructor(Level.WARN);
         logger.error("error statement");
 
         validateException(subject, "Unexpected ERROR log during test execution: error statement");
@@ -325,13 +325,17 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testWithAlsoLogBelowMinimumLevel() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR, Level.WARN);
         logger.error("error statement");
         logger.info("info statement");
         logger.warn("warn statement");
         subject.tearDown();
     }
+
+    protected abstract LogAsserter callLogAsserterConstructor(Level level);
+
+    protected abstract LogAsserter callSubjectSetUpLogAsserter(Level level);
 
     protected abstract CaptureInfoAppender createAppender();
 

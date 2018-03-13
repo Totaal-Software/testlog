@@ -37,10 +37,11 @@ public class LogAsserter implements LogCallback, Closeable {
      *
      * @param minimumLevel minimum log level to assert on
      */
+    @SuppressWarnings("WeakerAccess")
     public LogAsserter(Level minimumLevel) {
         this.minimumLevel = minimumLevel;
         logging = LoggingFactory.getLogging();
-        logging.registerCallback(this);
+        initialize();
     }
 
     /**
@@ -53,27 +54,45 @@ public class LogAsserter implements LogCallback, Closeable {
         return new LogAsserter(minimumLevel);
     }
 
+    /**
+     * Assert the current expectations and reset the expectation. (So that going forward all logs will be asserted
+     * again)
+     */
+    @SuppressWarnings("WeakerAccess")
+    public void assertAndReset() {
+        if (!expectations.isEmpty()) {
+            try {
+                // wait for expectations, else they may bleed into the next test
+                // this is probably only true with something asynchronous in the chain
+                synchronized (this) {
+                    wait(MAXIMUM_TIME_OUT);
+                }
+                if (assertionError == null) {
+                    assertExpectationsIsEmptyAfterWait();
+                }
+            } catch (InterruptedException exception) {
+                throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
+            }
+        }
+        throwPreparedAssertionError();
+        expectations.clear();
+    }
+
     @Override
     public void close() {
         tearDown();
     }
 
     /**
-     * Expect a log event of the given level. (Can be called multiple times to set up subsequent expectations)
-     *
-     * @param level log event level to expect
-     */
-    public void expect(Level level) {
-        expectations.add(level);
-    }
-
-    /**
-     * Expect log events of the given levels.
+     * Expect log events of the given levels, in the given order.
      *
      * @param levels log event levels to expect
+     * @return a closeable object that can be used to trigger assertion and reset of the expectations upon leaving a
+     * {@code try} block
      */
-    public void expect(Level... levels) {
+    public ExpectedLogs expect(Level... levels) {
         expectations.addAll(asList(levels));
+        return this::assertAndReset;
     }
 
     public Logging getDelegate() {
@@ -106,21 +125,7 @@ public class LogAsserter implements LogCallback, Closeable {
      */
     public void tearDown() {
         try {
-            if (!expectations.isEmpty()) {
-                try {
-                    // wait for expectations, else they may bleed into the next test
-                    // this is probably only true with something asynchronous in the chain
-                    synchronized (this) {
-                        wait(MAXIMUM_TIME_OUT);
-                    }
-                    if (assertionError == null) {
-                        assertExpectationsIsEmptyAfterWait();
-                    }
-                } catch (InterruptedException exception) {
-                    throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
-                }
-            }
-            throwPreparedAssertionError();
+            assertAndReset();
         } finally {
             logging.deregisterCallback(this);
         }
@@ -139,6 +144,10 @@ public class LogAsserter implements LogCallback, Closeable {
             exceptionMessage += format("; throwable: %s", throwable);
         }
         assertionError = new AssertionError(exceptionMessage);
+    }
+
+    protected void initialize() {
+        logging.registerCallback(this);
     }
 
     private void logInfoIfBelowMinimumLevel(String format, Object... args) {

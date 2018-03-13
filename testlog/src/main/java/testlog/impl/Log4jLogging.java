@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
-
 class Log4jLogging implements Logging {
     private final Map<LogCallback, Appender> logCallbacks = new HashMap<>();
 

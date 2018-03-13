@@ -16,13 +16,24 @@ import static org.junit.Assert.assertEquals;
 public class LogbackLogAsserterTest extends AbstractLogAsserterTest {
     @Test
     public void testDelegate() {
-        LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN);
-        Logging actual = subject.getDelegate();
-        assertEquals("LogbackLogging", actual.getClass().getSimpleName());
+        try (LogAsserter subject = LogAsserter.setUpLogAsserter(Level.WARN)) {
+            Logging actual = subject.getDelegate();
+            assertEquals("LogbackLogging", actual.getClass().getSimpleName());
+        }
     }
 
     private static ch.qos.logback.classic.Logger getRootLogger() {
         return (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+    }
+
+    @Override
+    protected LogAsserter callLogAsserterConstructor(Level level) {
+        return new LogAsserter(level);
+    }
+
+    @Override
+    protected LogAsserter callSubjectSetUpLogAsserter(Level level) {
+        return LogAsserter.setUpLogAsserter(level);
     }
 
     @Override
@@ -38,7 +49,7 @@ public class LogbackLogAsserterTest extends AbstractLogAsserterTest {
     private static class LogbackCaptureInfoAppender extends AppenderBase<ILoggingEvent> implements CaptureInfoAppender {
         private List<String> messages = new ArrayList<>();
 
-        public LogbackCaptureInfoAppender() {
+        LogbackCaptureInfoAppender() {
             started = true;
         }
 
