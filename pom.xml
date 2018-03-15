@@ -32,8 +32,8 @@
         <module>testlog</module>
     </modules>
     <scm>
-        <connection>scm:git:git://github.com/Totaal-Software/testlog.git</connection>
-        <developerConnection>scm:git:ssh://github.com:Totaal-Software/testlog.git</developerConnection>
+        <connection>scm:git:git@github.com:Totaal-Software/testlog.git</connection>
+        <developerConnection>scm:git:git@github.com:Totaal-Software/testlog.git</developerConnection>
         <tag>HEAD</tag>
         <url>http://github.com/Totaal-Software/testlog/tree/master</url>
     </scm>
