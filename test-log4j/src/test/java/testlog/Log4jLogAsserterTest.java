@@ -41,6 +41,11 @@ public class Log4jLogAsserterTest extends AbstractLogAsserterTest {
     }
 
     @Override
+    protected boolean isMuted() {
+        return false;
+    }
+
+    @Override
     protected void enableTraceLogging() {
         getRootLogger().setLevel(org.apache.log4j.Level.TRACE);
     }

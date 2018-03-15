@@ -23,6 +23,11 @@ public class LogbackMutedLogAsserterAsserterTest extends LogbackLogAsserterTest 
 
     @Override
     protected LogAsserter callSubjectSetUpLogAsserter(Level level) {
-        return MutedLogAsserter.setUpLogAsserter(level);
+        return MutedLogAsserter.setupMutedLogAsserter(level);
+    }
+
+    @Override
+    protected boolean isMuted() {
+        return true;
     }
 }

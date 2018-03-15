@@ -46,6 +46,11 @@ public class LogbackLogAsserterTest extends AbstractLogAsserterTest {
         getRootLogger().setLevel(ch.qos.logback.classic.Level.TRACE);
     }
 
+    @Override
+    protected boolean isMuted() {
+        return false;
+    }
+
     private static class LogbackCaptureInfoAppender extends AppenderBase<ILoggingEvent> implements CaptureInfoAppender {
         private List<String> messages = new ArrayList<>();
 

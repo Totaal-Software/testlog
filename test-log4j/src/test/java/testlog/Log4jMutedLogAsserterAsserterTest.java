@@ -23,6 +23,11 @@ public class Log4jMutedLogAsserterAsserterTest extends Log4jLogAsserterTest {
 
     @Override
     protected LogAsserter callSubjectSetUpLogAsserter(Level level) {
-        return MutedLogAsserter.setUpLogAsserter(level);
+        return MutedLogAsserter.setupMutedLogAsserter(level);
+    }
+
+    @Override
+    protected boolean isMuted() {
+        return true;
     }
 }

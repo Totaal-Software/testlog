@@ -157,7 +157,11 @@ public abstract class AbstractLogAsserterTest {
         logger.error("error statement");
 
         subject.tearDown();
-        appender.assertMessages("allowed log at level ERROR: error statement");
+        if (isMuted()) {
+            appender.assertMessages(/* empty */);
+        } else {
+            appender.assertMessages("allowed log at level ERROR: error statement");
+        }
         appender.unregister();
     }
 
@@ -340,6 +344,8 @@ public abstract class AbstractLogAsserterTest {
     protected abstract CaptureInfoAppender createAppender();
 
     protected abstract void enableTraceLogging();
+
+    protected abstract boolean isMuted();
 
     private CaptureInfoAppender registerAppender() {
         CaptureInfoAppender appender = createAppender();
