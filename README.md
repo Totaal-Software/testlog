@@ -1,6 +1,6 @@
 # testlog
 
-[![Build Status](https://travis-ci.org/Totaal-Software/testlog.svg?branch=master)](https://travis-ci.org/Totaal-Software/testlog) [![Coverage Status](https://coveralls.io/repos/github/Totaal-Software/testlog/badge.svg?branch=master)](https://coveralls.io/github/Totaal-Software/testlog?branch=master)
+![Maven Central](https://img.shields.io/maven-central/v/com.totaalsoftware.testlog/testlog.svg) [![Build Status](https://travis-ci.org/Totaal-Software/testlog.svg?branch=master)](https://travis-ci.org/Totaal-Software/testlog) [![Coverage Status](https://coveralls.io/repos/github/Totaal-Software/testlog/badge.svg?branch=master)](https://coveralls.io/github/Totaal-Software/testlog?branch=master)
 
 Library to interact with logging in JUnit tests. Some main concepts are:
 
