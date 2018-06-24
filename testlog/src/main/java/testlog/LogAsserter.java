@@ -61,22 +61,25 @@ public class LogAsserter implements LogCallback, Closeable {
      */
     @SuppressWarnings("WeakerAccess")
     public void assertAndReset() {
-        if (!expectations.isEmpty()) {
-            try {
-                // wait for expectations, else they may bleed into the next test
-                // this is probably only true with something asynchronous in the chain
-                synchronized (this) {
-                    wait(MAXIMUM_TIME_OUT);
+        try {
+            if (!expectations.isEmpty()) {
+                try {
+                    // wait for expectations, else they may bleed into the next test
+                    // this is probably only true with something asynchronous in the chain
+                    synchronized (this) {
+                        wait(MAXIMUM_TIME_OUT);
+                    }
+                    if (assertionError == null) {
+                        assertExpectationsIsEmptyAfterWait();
+                    }
+                } catch (InterruptedException exception) {
+                    throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
                 }
-                if (assertionError == null) {
-                    assertExpectationsIsEmptyAfterWait();
-                }
-            } catch (InterruptedException exception) {
-                throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
             }
+            throwPreparedAssertionError();
+        } finally {
+            expectations.clear();
         }
-        throwPreparedAssertionError();
-        expectations.clear();
     }
 
     @Override
@@ -95,10 +98,6 @@ public class LogAsserter implements LogCallback, Closeable {
     public ExpectedLogs expect(Level... levels) {
         expectations.addAll(asList(levels));
         return this::assertAndReset;
-    }
-
-    Logging getDelegate() {
-        return logging;
     }
 
     @Override
@@ -146,6 +145,10 @@ public class LogAsserter implements LogCallback, Closeable {
             exceptionMessage += format("; throwable: %s", throwable);
         }
         assertionError = new AssertionError(exceptionMessage, throwable);
+    }
+
+    Logging getDelegate() {
+        return logging;
     }
 
     protected void initialize() {

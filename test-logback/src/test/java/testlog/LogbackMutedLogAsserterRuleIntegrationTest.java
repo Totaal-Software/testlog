@@ -1,0 +1,4 @@
+package testlog;
+
+public class LogbackMutedLogAsserterRuleIntegrationTest extends AbstractMutedLogAsserterRuleIntegrationTest {
+}

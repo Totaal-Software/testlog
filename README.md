@@ -7,6 +7,8 @@ Library to interact with logging in JUnit tests. Some main concepts are:
 - Muting: make log entirely silent
 - Assertions: assert that the log only contains specified messages of a given level
 
+There is also a JUnit rule for your convenience.
+
 ## Requirements
 
 Projects using `testlog` must use:
@@ -150,6 +152,23 @@ Or use the `Closeable` implementation, this works for both `LogAsserter` and `Mu
             logAsserter.tearDown();
         }
 
+Or use the JUnit rule, which wraps around a `MutedLogAsserter`:
+
+    import testlog.MutedLogAsserterRule;
+
+    public class MyTest {
+    
+        @Rule
+        public MutedLogAsserterRule subject = new MutedLogAsserterRule();
+    
+        @Test
+        public void testSomething() {
+            try (ExpectedLogs ignored = subject.expect(Level.WARN)) {
+
+                ...test something... expectations are observed...
+
+            }
+        }
 
 
 ## FAQ
