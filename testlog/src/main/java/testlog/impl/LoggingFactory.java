@@ -13,12 +13,17 @@ public class LoggingFactory {
         return new LogbackLogging();
     }
 
-    private static boolean hasLog4j() {
+    private static boolean hasClass(String className) {
         try {
-            Class.forName("org.apache.log4j.Logger");
+            Class.forName(className);
             return true;
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    private static boolean hasLog4j() {
+        // only logger and not appender happens for log4j-over-slf4j, in which case log4j is probably not what we want
+        return hasClass("org.apache.log4j.Logger") && hasClass("org.apache.log4j.varia.NullAppender");
     }
 }
