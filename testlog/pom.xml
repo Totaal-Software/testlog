@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.totaalsoftware.testlog</groupId>
         <artifactId>testlog-parent</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1</version>
     </parent>
     <artifactId>testlog</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <name>${project.artifactId}</name>
     <description>Library to interact with logging in JUnit tests</description>
     <dependencies>
