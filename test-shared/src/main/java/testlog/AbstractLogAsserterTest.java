@@ -39,6 +39,26 @@ public abstract class AbstractLogAsserterTest {
     }
 
     @Test
+    public void testCloseWithUnexpectedLogAndException() {
+        boolean fail = false;
+        Exception expectedCause = new Exception("something wrong");
+        try {
+            try (LogAsserter ignored = callSubjectSetUpLogAsserter(Level.WARN)) {
+                logger.error("error statement", expectedCause);
+            }
+            fail = true;
+        } catch (AssertionError exception) {
+            assertEquals("Unexpected ERROR log during test execution: error statement; " +
+                    "throwable: java.lang.Exception: something wrong", exception.getMessage());
+            Throwable actualCause = exception.getCause();
+            assertEquals(expectedCause, actualCause);
+        }
+        if (fail) {
+            fail("expected an exception for the unexpected log");
+        }
+    }
+
+    @Test
     public void testCloseWithoutUnexpectedLog() {
         try (LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN)) {
             subject.expect(Level.ERROR);

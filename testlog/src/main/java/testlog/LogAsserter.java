@@ -50,6 +50,7 @@ public class LogAsserter implements LogCallback, Closeable {
      * @param minimumLevel minimum log level to assert on
      * @return new log asserter
      */
+    @SuppressWarnings("WeakerAccess")
     public static LogAsserter setUpLogAsserter(Level minimumLevel) {
         return new LogAsserter(minimumLevel);
     }
@@ -90,12 +91,13 @@ public class LogAsserter implements LogCallback, Closeable {
      * @return a closeable object that can be used to trigger assertion and reset of the expectations upon leaving a
      * {@code try} block
      */
+    @SuppressWarnings("WeakerAccess")
     public ExpectedLogs expect(Level... levels) {
         expectations.addAll(asList(levels));
         return this::assertAndReset;
     }
 
-    public Logging getDelegate() {
+    Logging getDelegate() {
         return logging;
     }
 
@@ -143,7 +145,7 @@ public class LogAsserter implements LogCallback, Closeable {
         if (throwable != null) {
             exceptionMessage += format("; throwable: %s", throwable);
         }
-        assertionError = new AssertionError(exceptionMessage);
+        assertionError = new AssertionError(exceptionMessage, throwable);
     }
 
     protected void initialize() {
