@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.totaalsoftware.testlog</groupId>
     <artifactId>testlog-parent</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
     <description>Library to interact with logging in JUnit tests (parent project)</description>
@@ -34,7 +34,7 @@
     <scm>
         <connection>scm:git:git@github.com:Totaal-Software/testlog.git</connection>
         <developerConnection>scm:git:git@github.com:Totaal-Software/testlog.git</developerConnection>
-        <tag>testlog-parent-1.2.0</tag>
+        <tag>HEAD</tag>
         <url>http://github.com/Totaal-Software/testlog/tree/master</url>
     </scm>
     <issueManagement>
