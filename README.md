@@ -14,7 +14,7 @@ There is also a JUnit rule for your convenience.
 Projects using `testlog` must use:
 
 - Java 8 or higher
-- JUnit
+- JUnit (supports 4 and 5)
 - SLF4j logging facade
 - One of the supported logging implementations: Log4j, Logback
 
@@ -152,18 +152,45 @@ Or use the `Closeable` implementation, this works for both `LogAsserter` and `Mu
             logAsserter.tearDown();
         }
 
-Or use the JUnit rule, which wraps around a `MutedLogAsserter`:
+Or use the JUnit 5 extension, which wraps around a `MutedLogAsserter`:
+
+    import testlog.MutedLogAsserterExtension;
+
+    public class MyTest {
+    
+        @RegisterExtension
+        public MutedLogAsserterExtension mutedLogAsserter = new MutedLogAsserterExtension();
+    
+        @Test
+        public void testSomething() {
+            try (ExpectedLogs ignored = mutedLogAsserter.expect(Level.WARN)) {
+
+                ...test something... expectations are observed...
+
+            }
+        }
+
+Or like this:
+
+    import testlog.MutedLogAsserterExtension;
+
+    @ExtendWith(MutedLogAsserterExtension.class)
+    public class MyTest {
+    ...
+
+
+Or use the JUnit 4 rule, which wraps around a `MutedLogAsserter`:
 
     import testlog.MutedLogAsserterRule;
 
     public class MyTest {
     
         @Rule
-        public MutedLogAsserterRule subject = new MutedLogAsserterRule();
+        public MutedLogAsserterRule mutedLogAsserter = new MutedLogAsserterRule();
     
         @Test
         public void testSomething() {
-            try (ExpectedLogs ignored = subject.expect(Level.WARN)) {
+            try (ExpectedLogs ignored = mutedLogAsserter.expect(Level.WARN)) {
 
                 ...test something... expectations are observed...
 
