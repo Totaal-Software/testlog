@@ -109,7 +109,7 @@ public abstract class AbstractLogAsserterTest {
             fail = true;
         } catch (AssertionError exception) {
             assertEquals(
-                    "1 expected log entries did not occur after waiting 5000ms: [ERROR]", exception.getMessage());
+                    "1 expected log entries did not occur after waiting 5000ms: ERROR", exception.getMessage());
         }
         if (fail) {
             fail("expected an exception for the unexpected log");
@@ -129,7 +129,7 @@ public abstract class AbstractLogAsserterTest {
             fail = true;
         } catch (AssertionError exception) {
             assertEquals(
-                    "2 expected log entries did not occur after waiting 5000ms: [WARN, ERROR]", exception.getMessage());
+                    "2 expected log entries did not occur after waiting 5000ms: WARN, ERROR", exception.getMessage());
         }
         if (fail) {
             fail("expected an exception for the expected log that did not occur");
@@ -236,7 +236,7 @@ public abstract class AbstractLogAsserterTest {
 
         assertNotNull(caught[0]);
         assertEquals(Error.class, caught[0].getClass());
-        assertEquals("waiting for expected log entries got interrupted: [ERROR]", caught[0].getMessage());
+        assertEquals("waiting for expected log entries got interrupted: ERROR", caught[0].getMessage());
     }
 
     @Test

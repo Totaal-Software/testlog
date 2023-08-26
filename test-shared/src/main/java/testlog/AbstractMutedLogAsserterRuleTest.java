@@ -24,7 +24,7 @@ public abstract class AbstractMutedLogAsserterRuleTest {
             subject.assertAndReset();
             fail = true;
         } catch (AssertionError exception) {
-            assertEquals("1 expected log entries did not occur after waiting 5000ms: [WARN]", exception.getMessage());
+            assertEquals("1 expected log entries did not occur after waiting 5000ms: WARN", exception.getMessage());
         }
         if (fail) {
             fail("expected an exception for the unexpected log");
