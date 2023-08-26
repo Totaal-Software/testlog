@@ -1,5 +1,6 @@
 package testlog;
 
+import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -9,6 +10,11 @@ import org.slf4j.event.Level;
 import java.io.IOException;
 
 import static java.lang.Thread.sleep;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -24,37 +30,45 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testCloseWithUnexpectedLog() {
-        boolean fail = false;
         try {
             try (LogAsserter ignored = callSubjectSetUpLogAsserter(Level.WARN)) {
                 logger.error("error statement");
             }
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals("Unexpected ERROR log during test execution: error statement", exception.getMessage());
-        }
-        if (fail) {
             fail("expected an exception for the unexpected log");
+        } catch (AssertionError exception) {
+            String actual = exception.getMessage();
+            assertEquals("Unexpected ERROR log during test execution with the following message: error statement\n"
+                    + "History:\n"
+                    + " (1) ERROR: error statement\n"
+                    + " (1) -- this is the one that caused the log asserter to fail --\n"
+                    + "(now follows once more the stacktrace for the log item that caused this)", actual);
         }
     }
 
     @Test
     public void testCloseWithUnexpectedLogAndException() {
-        boolean fail = false;
         Exception expectedCause = new Exception("something wrong");
         try {
             try (LogAsserter ignored = callSubjectSetUpLogAsserter(Level.WARN)) {
                 logger.error("error statement", expectedCause);
             }
-            fail = true;
+            fail("expected an exception for the unexpected log");
         } catch (AssertionError exception) {
-            assertEquals("Unexpected ERROR log during test execution: error statement; " +
-                    "throwable: java.lang.Exception: something wrong", exception.getMessage());
+            String actual = exception.getMessage();
+            assertThat(actual, both(startsWith("Unexpected ERROR log during test execution with the following message: "
+                    + "error statement\n"
+                    + "History:\n"
+                    + " (1) ERROR: error statement\n"
+                    + " (1) -- this is the one that caused the log asserter to fail --\n"
+                    + " (1)\n"
+                    + " (1)   java.lang.Exception: something wrong\n"
+                    + " (1)       at testlog.AbstractLogAsserterTest.testCloseWithUnexpectedLogAndException("
+                    + "AbstractLogAsserterTest.java:"))
+                    .and(endsWith(" (1)\n"
+                            + "(now follows once more the stacktrace for the log item that caused this)")));
+
             Throwable actualCause = exception.getCause();
             assertEquals(expectedCause, actualCause);
-        }
-        if (fail) {
-            fail("expected an exception for the unexpected log");
         }
     }
 
@@ -64,6 +78,39 @@ public abstract class AbstractLogAsserterTest {
             subject.expect(Level.ERROR);
             logger.error("error statement");
         }
+    }
+
+    @Test
+    public void testExceptionMessageLong() {
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
+        logger.error("this old message is already 80 characters long at the upcoming very next period.",
+                new IOException("something"));
+
+        validateException(subject, startsWith("Unexpected ERROR log during test execution with the following message: "
+                + "this old message is already 80 characters long at the upcoming very next period.\n"
+                + "History:\n"
+                + " (1) ERROR: this old message is already 80 characters long at the upcoming very next period.\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + " (1)\n"
+                + " (1)   java.io.IOException: something\n"
+                + " (1)       at testlog.AbstractLogAsserterTest.testExceptionMessageLong"));
+    }
+
+    @Test
+    public void testExceptionMessageTooLong() {
+        LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
+        logger.error("this old message is already 80 characters long at the upcoming very next period._",
+                new IOException("something"));
+
+        validateException(subject, startsWith("Unexpected ERROR log during test execution with the following message: "
+                + "this old message is already 80 characters long at the upcoming very next pe... (abbreviated, see "
+                + "full message below)\n"
+                + "History:\n"
+                + " (1) ERROR: this old message is already 80 characters long at the upcoming very next period._\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + " (1)\n"
+                + " (1)   java.io.IOException: something\n"
+                + " (1)       at testlog.AbstractLogAsserterTest.testExceptionMessageTooLong"));
     }
 
     @Test
@@ -101,24 +148,19 @@ public abstract class AbstractLogAsserterTest {
 
     @Test
     public void testExpectedErrorNotOccurred() {
-        boolean fail = false;
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         try {
             subject.tearDown();
-            fail = true;
+            fail("expected an exception for the unexpected log");
         } catch (AssertionError exception) {
             assertEquals(
                     "1 expected log entries did not occur after waiting 5000ms: ERROR", exception.getMessage());
-        }
-        if (fail) {
-            fail("expected an exception for the unexpected log");
         }
     }
 
     @Test
     public void testExpectedErrorsNotOccurred() {
-        boolean fail = false;
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         subject.expect(Level.ERROR);
         subject.expect(Level.WARN);
@@ -126,13 +168,10 @@ public abstract class AbstractLogAsserterTest {
         logger.error("error statement");
         try {
             subject.tearDown();
-            fail = true;
+            fail("expected an exception for the expected log that did not occur");
         } catch (AssertionError exception) {
             assertEquals(
                     "2 expected log entries did not occur after waiting 5000ms: WARN, ERROR", exception.getMessage());
-        }
-        if (fail) {
-            fail("expected an exception for the expected log that did not occur");
         }
     }
 
@@ -155,7 +194,12 @@ public abstract class AbstractLogAsserterTest {
         logger.error("error statement");
         logger.error("error statement");
 
-        validateException(subject, "Unexpected WARN log during test execution: warn statement");
+        validateException(subject, "Unexpected WARN log during test execution with the following message: "
+                + "warn statement\n"
+                + "History:\n"
+                + " (1) WARN: warn statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -244,7 +288,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.DEBUG);
         logger.debug("debug statement");
 
-        validateException(subject, "Unexpected DEBUG log during test execution: debug statement");
+        validateException(subject, "Unexpected DEBUG log during test execution with the following message: "
+                + "debug statement\n"
+                + "History:\n"
+                + " (1) DEBUG: debug statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -252,7 +301,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.error("error statement");
 
-        validateException(subject, "Unexpected ERROR log during test execution: error statement");
+        validateException(subject, "Unexpected ERROR log during test execution with the following message: "
+                + "error statement\n"
+                + "History:\n"
+                + " (1) ERROR: error statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -283,7 +337,11 @@ public abstract class AbstractLogAsserterTest {
 
         assertNotNull(caught[0]);
         assertEquals(AssertionError.class, caught[0].getClass());
-        assertEquals("Unexpected WARN log during test execution: warn statement", caught[0].getMessage());
+        assertEquals("Unexpected WARN log during test execution with the following message: warn statement\n"
+                + "History:\n"
+                + " (1) WARN: warn statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)", caught[0].getMessage());
     }
 
     @Test
@@ -293,7 +351,13 @@ public abstract class AbstractLogAsserterTest {
         logger.error("error statement 1");
         logger.error("error statement 2");
 
-        validateException(subject, "Unexpected ERROR log during test execution: error statement 2");
+        validateException(subject, "Unexpected ERROR log during test execution with the following message: "
+                + "error statement 2\n"
+                + "History:\n"
+                + " (1) ERROR: error statement 1\n"
+                + " (2) ERROR: error statement 2\n"
+                + " (2) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -301,8 +365,14 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.error("error statement", new IOException("something"));
 
-        validateException(subject, "Unexpected ERROR log during test execution: error statement; " +
-                "throwable: java.io.IOException: something");
+        validateException(subject, startsWith("Unexpected ERROR log during test execution with the following message: "
+                + "error statement\n"
+                + "History:\n"
+                + " (1) ERROR: error statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + " (1)\n"
+                + " (1)   java.io.IOException: something\n"
+                + " (1)       at testlog.AbstractLogAsserterTest.testUnexpectedErrorWithException"));
     }
 
     @Test
@@ -310,7 +380,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.INFO);
         logger.info("info statement");
 
-        validateException(subject, "Unexpected INFO log during test execution: info statement");
+        validateException(subject, "Unexpected INFO log during test execution with the following message: "
+                + "info statement\n"
+                + "History:\n"
+                + " (1) INFO: info statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -320,7 +395,12 @@ public abstract class AbstractLogAsserterTest {
         logger.error("error statement 2");
 
         // make sure we're asserting the first unexpected error, not the second
-        validateException(subject, "Unexpected ERROR log during test execution: error statement 1");
+        validateException(subject, "Unexpected ERROR log during test execution with the following message: "
+                + "error statement 1\n"
+                + "History:\n"
+                + " (1) ERROR: error statement 1\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -328,7 +408,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.TRACE);
         logger.trace("trace statement");
 
-        validateException(subject, "Unexpected TRACE log during test execution: trace statement");
+        validateException(subject, "Unexpected TRACE log during test execution with the following message: "
+                + "trace statement\n"
+                + "History:\n"
+                + " (1) TRACE: trace statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -336,7 +421,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callSubjectSetUpLogAsserter(Level.WARN);
         logger.warn("warn statement");
 
-        validateException(subject, "Unexpected WARN log during test execution: warn statement");
+        validateException(subject, "Unexpected WARN log during test execution with the following message: "
+                + "warn statement\n"
+                + "History:\n"
+                + " (1) WARN: warn statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -344,7 +434,12 @@ public abstract class AbstractLogAsserterTest {
         LogAsserter subject = callLogAsserterConstructor(Level.WARN);
         logger.error("error statement");
 
-        validateException(subject, "Unexpected ERROR log during test execution: error statement");
+        validateException(subject, "Unexpected ERROR log during test execution with the following message: "
+                + "error statement\n"
+                + "History:\n"
+                + " (1) ERROR: error statement\n"
+                + " (1) -- this is the one that caused the log asserter to fail --\n"
+                + "(now follows once more the stacktrace for the log item that caused this)");
     }
 
     @Test
@@ -374,15 +469,15 @@ public abstract class AbstractLogAsserterTest {
     }
 
     private void validateException(LogAsserter subject, String expected) {
-        boolean fail = false;
+        validateException(subject, equalTo(expected));
+    }
+
+    private void validateException(LogAsserter subject, Matcher<String> asExpected) {
         try {
             subject.tearDown();
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals(expected, exception.getMessage());
-        }
-        if (fail) {
             fail("expected an exception for the unexpected log");
+        } catch (AssertionError exception) {
+            assertThat(exception.getMessage(), asExpected);
         }
     }
 

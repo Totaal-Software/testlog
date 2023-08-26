@@ -15,6 +15,10 @@ import testlog.strategy.MatcherStrategy;
 import testlog.strategy.NoopStrategy;
 
 import java.io.Closeable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.lang.String.format;
 
@@ -24,6 +28,8 @@ import static java.lang.String.format;
 public class LogAsserter implements LogCallback, Closeable {
 
     public static final NoopStrategy NOOP_STRATEGY = new NoopStrategy();
+
+    private static final int MAXIMUM_MESSAGE_LENGTH = 80;
 
     private static final long MAXIMUM_TIME_OUT = 5_000;
 
@@ -36,6 +42,8 @@ public class LogAsserter implements LogCallback, Closeable {
     private AssertionError assertionError;
 
     private AssertionStrategy assertionStrategy;
+
+    private List<LogItem> history = new ArrayList<>();
 
     /**
      * Constructor.
@@ -76,6 +84,7 @@ public class LogAsserter implements LogCallback, Closeable {
             throwPreparedAssertionError();
         } finally {
             assertionStrategy = NOOP_STRATEGY;
+            history.clear();
         }
     }
 
@@ -136,6 +145,7 @@ public class LogAsserter implements LogCallback, Closeable {
         }
 
         LogItem logItem = new LogItem(level, message, throwable);
+        history.add(logItem);
         if (assertionStrategy.matchesNextExpectation(logItem)) {
             logInfoIfBelowMinimumLevel("allowed log at level %s: %s", level, message);
             synchronized (this) {
@@ -145,7 +155,7 @@ public class LogAsserter implements LogCallback, Closeable {
         }
 
         if (assertionError == null) {
-            assertUnexpectedLogging(level, message, throwable);
+            assertUnexpectedLogging(logItem);
         }
         assertionStrategy.removeLaterExpectationForEfficiency(logItem);
     }
@@ -179,18 +189,56 @@ public class LogAsserter implements LogCallback, Closeable {
         }
     }
 
-    private void assertUnexpectedLogging(Level level, String message, Throwable throwable) {
-        String exceptionMessage = format("Unexpected %s log during test execution: %s", level, message);
-        if (throwable != null) {
-            exceptionMessage += format("; throwable: %s", throwable);
+    private void assertUnexpectedLogging(LogItem logItem) {
+        String template = "Unexpected %s log during test execution with the following message: %s"
+                + "\n"
+                + "History:"
+                + "%s"
+                + "\n"
+                + "(now follows once more the stacktrace for the log item that caused this)";
+        String exceptionMessage = format(template, logItem.getLevel(), getMessageSummary(logItem), getHistory(logItem));
+        assertionError = new AssertionError(exceptionMessage, logItem.getThrowable());
+    }
+
+    private String getHistory(LogItem logItem) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 1; i <= history.size(); i++) {
+            LogItem item = history.get(i - 1);
+            stringBuilder.append(format("\n (%d) %s: %s", i, item.getLevel(), item.getMessage()));
+            if (logItem == item) {
+                stringBuilder.append(format("\n (%d) -- this is the one that caused the log asserter to fail --", i));
+            }
+
+            Throwable throwable = item.getThrowable();
+            if (throwable != null) {
+                stringBuilder.append(format("\n (%d)", i));
+                for (String line : stackTrace(throwable).split("\n")) {
+                    stringBuilder.append(format("\n (%d)   %s", i, line.replace("\t", "    ")));
+                }
+                stringBuilder.append(format("\n (%d)", i));
+            }
         }
-        assertionError = new AssertionError(exceptionMessage, throwable);
+        return stringBuilder.toString();
+    }
+
+    private String getMessageSummary(LogItem logItem) {
+        String message = logItem.getMessage();
+        return message.length() > MAXIMUM_MESSAGE_LENGTH
+               ? format("%s... (abbreviated, see full message below)", message.substring(0, MAXIMUM_MESSAGE_LENGTH - 5))
+               : message;
     }
 
     private void logInfoIfBelowMinimumLevel(String format, Object... args) {
         if (Level.INFO.toInt() < minimumLevel.toInt()) {
             logger.info(format(format, args));
         }
+    }
+
+    private String stackTrace(Throwable throwable) {
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        throwable.printStackTrace(printWriter);
+        return stringWriter.toString();
     }
 
     private void throwPreparedAssertionError() {
