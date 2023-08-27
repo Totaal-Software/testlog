@@ -19,15 +19,11 @@ public abstract class AbstractMutedLogAsserterExtensionTest {
         subject.beforeEach(null);
         subject.expect(Level.WARN);
 
-        boolean fail = false;
         try {
             subject.assertAndReset();
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals("1 expected log entries did not occur after waiting 5000ms: [WARN]", exception.getMessage());
-        }
-        if (fail) {
             fail("expected an exception for the unexpected log");
+        } catch (AssertionError exception) {
+            assertEquals("1 expected log entries did not occur after waiting 5000ms: WARN", exception.getMessage());
         }
 
         subject.afterEach(null);
@@ -65,15 +61,16 @@ public abstract class AbstractMutedLogAsserterExtensionTest {
         assertNotNull(subject.getMutedLogAsserter());
         logger.info("unexpected log");
 
-        boolean fail = false;
         try {
             subject.afterEach(null);
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals("Unexpected INFO log during test execution: unexpected log", exception.getMessage());
-        }
-        if (fail) {
             fail("expected an exception for the expected log that did not occur");
+        } catch (AssertionError exception) {
+            String actual = exception.getMessage();
+            assertEquals("Unexpected INFO log during test execution with the following message: unexpected log\n"
+                    + "History:\n"
+                    + " (1) INFO: unexpected log\n"
+                    + " (1) -- this is the one that caused the log asserter to fail --\n"
+                    + "(now follows once more the stacktrace for the log item that caused this)", actual);
         }
     }
 }

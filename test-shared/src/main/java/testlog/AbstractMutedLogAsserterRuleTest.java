@@ -14,32 +14,28 @@ public abstract class AbstractMutedLogAsserterRuleTest {
     private static final Logger logger = LoggerFactory.getLogger(AbstractMutedLogAsserterRuleTest.class);
 
     @Test
-    public void testAssertAndResetNoExpectedLog() throws Throwable {
-        MutedLogAsserterRule subject = new MutedLogAsserterRule();
-        subject.before();
-        subject.expect(Level.WARN);
-
-        boolean fail = false;
-        try {
-            subject.assertAndReset();
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals("1 expected log entries did not occur after waiting 5000ms: [WARN]", exception.getMessage());
-        }
-        if (fail) {
-            fail("expected an exception for the unexpected log");
-        }
-
-        subject.after();
-    }
-
-    @Test
     public void testAssertAndResetExpectedLog() throws Throwable {
         MutedLogAsserterRule subject = new MutedLogAsserterRule();
         subject.before();
         subject.expect(Level.WARN);
         logger.warn("expected log");
         subject.assertAndReset();
+        subject.after();
+    }
+
+    @Test
+    public void testAssertAndResetNoExpectedLog() throws Throwable {
+        MutedLogAsserterRule subject = new MutedLogAsserterRule();
+        subject.before();
+        subject.expect(Level.WARN);
+
+        try {
+            subject.assertAndReset();
+            fail("expected an exception for the unexpected log");
+        } catch (AssertionError exception) {
+            assertEquals("1 expected log entries did not occur after waiting 5000ms: WARN", exception.getMessage());
+        }
+
         subject.after();
     }
 
@@ -65,15 +61,16 @@ public abstract class AbstractMutedLogAsserterRuleTest {
         assertNotNull(subject.getMutedLogAsserter());
         logger.info("unexpected log");
 
-        boolean fail = false;
         try {
             subject.after();
-            fail = true;
-        } catch (AssertionError exception) {
-            assertEquals("Unexpected INFO log during test execution: unexpected log", exception.getMessage());
-        }
-        if (fail) {
             fail("expected an exception for the expected log that did not occur");
+        } catch (AssertionError exception) {
+            String actual = exception.getMessage();
+            assertEquals("Unexpected INFO log during test execution with the following message: unexpected log\n"
+                    + "History:\n"
+                    + " (1) INFO: unexpected log\n"
+                    + " (1) -- this is the one that caused the log asserter to fail --\n"
+                    + "(now follows once more the stacktrace for the log item that caused this)", actual);
         }
     }
 }

@@ -1,36 +1,49 @@
 package testlog;
 
 
+import org.hamcrest.Matcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import testlog.impl.LogCallback;
 import testlog.impl.Logging;
 import testlog.impl.LoggingFactory;
+import testlog.strategy.AssertionStrategy;
+import testlog.strategy.CountStrategy;
+import testlog.strategy.LevelsStrategy;
+import testlog.strategy.MatcherStrategy;
+import testlog.strategy.NoopStrategy;
 
 import java.io.Closeable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 
 /**
  * Track the log and assert if a log occurs from a given level or higher. Meant to be used during unit tests
  */
 public class LogAsserter implements LogCallback, Closeable {
+
+    public static final NoopStrategy NOOP_STRATEGY = new NoopStrategy();
+
+    private static final int MAXIMUM_MESSAGE_LENGTH = 80;
+
     private static final long MAXIMUM_TIME_OUT = 5_000;
 
     private static final Logger logger = LoggerFactory.getLogger(LogAsserter.class);
 
-    private AssertionError assertionError;
-
-    private List<Level> expectations = new ArrayList<>();
-
     private final Logging logging;
 
     private final Level minimumLevel;
+
+    private AssertionError assertionError;
+
+    private AssertionStrategy assertionStrategy;
+
+    private List<LogItem> history = new ArrayList<>();
 
     /**
      * Constructor.
@@ -39,20 +52,10 @@ public class LogAsserter implements LogCallback, Closeable {
      */
     @SuppressWarnings("WeakerAccess")
     public LogAsserter(Level minimumLevel) {
+        assertionStrategy = NOOP_STRATEGY;
         this.minimumLevel = minimumLevel;
         logging = LoggingFactory.getLogging();
         initialize();
-    }
-
-    /**
-     * Set up a new log asserter.
-     *
-     * @param minimumLevel minimum log level to assert on
-     * @return new log asserter
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static LogAsserter setUpLogAsserter(Level minimumLevel) {
-        return new LogAsserter(minimumLevel);
     }
 
     /**
@@ -62,7 +65,7 @@ public class LogAsserter implements LogCallback, Closeable {
     @SuppressWarnings("WeakerAccess")
     public void assertAndReset() {
         try {
-            if (!expectations.isEmpty()) {
+            if (assertionStrategy.hasRemainingExpectations()) {
                 try {
                     // wait for expectations, else they may bleed into the next test
                     // this is probably only true with something asynchronous in the chain
@@ -73,18 +76,33 @@ public class LogAsserter implements LogCallback, Closeable {
                         assertExpectationsIsEmptyAfterWait();
                     }
                 } catch (InterruptedException exception) {
-                    throw new Error(format("waiting for expected log entries got interrupted: %s", expectations), exception);
+                    String remaining = assertionStrategy.describeRemainingExpectations();
+                    throw new Error(format("waiting for expected log entries got interrupted: %s",
+                            remaining), exception);
                 }
             }
             throwPreparedAssertionError();
         } finally {
-            expectations.clear();
+            assertionStrategy = NOOP_STRATEGY;
+            history.clear();
         }
     }
 
     @Override
     public void close() {
         tearDown();
+    }
+
+    /**
+     * Expect log events to be validated by the given matchers, in the given order.
+     *
+     * @param matchers matchers for log events to expect
+     * @return a closeable object that can be used to trigger assertion and reset of the expectations upon leaving a
+     * {@code try} block
+     */
+    @SafeVarargs
+    public final ExpectedLogs expect(Matcher<LogItem>... matchers) {
+        return expect(new MatcherStrategy(matchers));
     }
 
     /**
@@ -96,7 +114,27 @@ public class LogAsserter implements LogCallback, Closeable {
      */
     @SuppressWarnings("WeakerAccess")
     public ExpectedLogs expect(Level... levels) {
-        expectations.addAll(asList(levels));
+        // do some gymnastics here for backward compatibility
+        LevelsStrategy strategy = assertionStrategy instanceof LevelsStrategy
+                                  ? ((LevelsStrategy) assertionStrategy).addExpectations(levels)
+                                  : new LevelsStrategy(levels);
+
+        return expect(strategy);
+    }
+
+    /**
+     * Expect the given number of log events, only those that aren't muted, typically warnings and errors.
+     *
+     * @param count number of log events to expect
+     * @return a closeable object that can be used to trigger assertion and reset of the expectations upon leaving a
+     * {@code try} block
+     */
+    public ExpectedLogs expect(int count) {
+        return expect(new CountStrategy(count));
+    }
+
+    public ExpectedLogs expect(AssertionStrategy strategy) {
+        assertionStrategy = strategy;
         return this::assertAndReset;
     }
 
@@ -106,7 +144,9 @@ public class LogAsserter implements LogCallback, Closeable {
             return;
         }
 
-        if (matchesNextExpectation(level, message, throwable)) {
+        LogItem logItem = new LogItem(level, message, throwable);
+        history.add(logItem);
+        if (assertionStrategy.matchesNextExpectation(logItem)) {
             logInfoIfBelowMinimumLevel("allowed log at level %s: %s", level, message);
             synchronized (this) {
                 notify(); // see the wait in tearDown
@@ -115,9 +155,9 @@ public class LogAsserter implements LogCallback, Closeable {
         }
 
         if (assertionError == null) {
-            assertUnexpectedLogging(level, message, throwable);
+            assertUnexpectedLogging(logItem);
         }
-        removeLaterExpectationForEfficiency(level, message, throwable);
+        assertionStrategy.removeLaterExpectationForEfficiency(logItem);
     }
 
     /**
@@ -132,27 +172,60 @@ public class LogAsserter implements LogCallback, Closeable {
         }
     }
 
-    private void assertExpectationsIsEmptyAfterWait() {
-        if (!expectations.isEmpty()) {
-            String format = "%d expected log entries did not occur after waiting %dms: %s";
-            throw new AssertionError(format(format, expectations.size(), MAXIMUM_TIME_OUT, expectations));
-        }
-    }
-
-    private void assertUnexpectedLogging(Level level, String message, Throwable throwable) {
-        String exceptionMessage = format("Unexpected %s log during test execution: %s", level, message);
-        if (throwable != null) {
-            exceptionMessage += format("; throwable: %s", throwable);
-        }
-        assertionError = new AssertionError(exceptionMessage, throwable);
+    protected void initialize() {
+        logging.registerCallback(this);
     }
 
     Logging getDelegate() {
         return logging;
     }
 
-    protected void initialize() {
-        logging.registerCallback(this);
+    private void assertExpectationsIsEmptyAfterWait() {
+        if (assertionStrategy.hasRemainingExpectations()) {
+            int count = assertionStrategy.getRemainingCount();
+            String remaining = assertionStrategy.describeRemainingExpectations();
+            String format = "%d expected log entries did not occur after waiting %dms: %s";
+            throw new AssertionError(format(format, count, MAXIMUM_TIME_OUT, String.join(", ", remaining)));
+        }
+    }
+
+    private void assertUnexpectedLogging(LogItem logItem) {
+        String template = "Unexpected %s log during test execution with the following message: %s"
+                + "\n"
+                + "History:"
+                + "%s"
+                + "\n"
+                + "(now follows once more the stacktrace for the log item that caused this)";
+        String exceptionMessage = format(template, logItem.getLevel(), getMessageSummary(logItem), getHistory(logItem));
+        assertionError = new AssertionError(exceptionMessage, logItem.getThrowable());
+    }
+
+    private String getHistory(LogItem logItem) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 1; i <= history.size(); i++) {
+            LogItem item = history.get(i - 1);
+            stringBuilder.append(format("\n (%d) %s: %s", i, item.getLevel(), item.getMessage()));
+            if (logItem == item) {
+                stringBuilder.append(format("\n (%d) -- this is the one that caused the log asserter to fail --", i));
+            }
+
+            Throwable throwable = item.getThrowable();
+            if (throwable != null) {
+                stringBuilder.append(format("\n (%d)", i));
+                for (String line : stackTrace(throwable).split("\n")) {
+                    stringBuilder.append(format("\n (%d)   %s", i, line.replace("\t", "    ")));
+                }
+                stringBuilder.append(format("\n (%d)", i));
+            }
+        }
+        return stringBuilder.toString();
+    }
+
+    private String getMessageSummary(LogItem logItem) {
+        String message = logItem.getMessage();
+        return message.length() > MAXIMUM_MESSAGE_LENGTH
+               ? format("%s... (abbreviated, see full message below)", message.substring(0, MAXIMUM_MESSAGE_LENGTH - 5))
+               : message;
     }
 
     private void logInfoIfBelowMinimumLevel(String format, Object... args) {
@@ -161,33 +234,27 @@ public class LogAsserter implements LogCallback, Closeable {
         }
     }
 
-    private boolean matchesExpectation(Level expected, Level actual) {
-        return actual.equals(expected);
-    }
-
-    private boolean matchesNextExpectation(Level expected) {
-        Level actual = expectations.remove(0);
-        return matchesExpectation(expected, actual);
-    }
-
-    private boolean matchesNextExpectation(Level level, String message, Throwable throwable) {
-        return !expectations.isEmpty() && matchesNextExpectation(level);
-    }
-
-    private void removeLaterExpectationForEfficiency(Level expected, String message, Throwable throwable) {
-        Iterator<Level> iterator = expectations.iterator();
-        while (iterator.hasNext()) {
-            Level actual = iterator.next();
-            if (matchesExpectation(expected, actual)) {
-                iterator.remove();
-                return;
-            }
-        }
+    private String stackTrace(Throwable throwable) {
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        throwable.printStackTrace(printWriter);
+        return stringWriter.toString();
     }
 
     private void throwPreparedAssertionError() {
         if (assertionError != null) {
             throw assertionError;
         }
+    }
+
+    /**
+     * Set up a new log asserter.
+     *
+     * @param minimumLevel minimum log level to assert on
+     * @return new log asserter
+     */
+    @SuppressWarnings("WeakerAccess")
+    public static LogAsserter setUpLogAsserter(Level minimumLevel) {
+        return new LogAsserter(minimumLevel);
     }
 }
