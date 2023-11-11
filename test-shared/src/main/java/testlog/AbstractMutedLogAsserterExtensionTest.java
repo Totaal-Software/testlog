@@ -52,6 +52,19 @@ public abstract class AbstractMutedLogAsserterExtensionTest {
     }
 
     @Test
+    public void testExpectedErrors() throws Throwable {
+        MutedLogAsserterExtension subject = new MutedLogAsserterExtension(/* default constructor assumes WARN */);
+        subject.beforeEach(null);
+
+        try (ExpectedLogs ignored = subject.expect(Level.ERROR, Level.WARN)) {
+            logger.error("unexpected error");
+            logger.warn("unexpected warning");
+        }
+
+        subject.afterEach(null);
+    }
+
+    @Test
     public void testUnexpectedError() throws Throwable {
         MutedLogAsserterExtension subject = new MutedLogAsserterExtension(Level.INFO);
         assertNull(subject.getMutedLogAsserter());

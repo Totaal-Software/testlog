@@ -147,8 +147,10 @@ public class LogAsserter implements LogCallback, Closeable {
         history.add(logItem);
         if (assertionStrategy.matchesNextExpectation(logItem)) {
             logInfoIfBelowMinimumLevel("allowed log at level %s: %s", level, message);
-            synchronized (this) {
-                notify(); // see the wait in tearDown
+            if (!assertionStrategy.hasRemainingExpectations()) {
+                synchronized (this) {
+                    notify(); // see the wait in tearDown
+                }
             }
             return;
         }
