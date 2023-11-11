@@ -36,6 +36,12 @@ public class MutedLogAsserter extends LogAsserter {
     }
 
     @Override
+    protected void assertUnexpectedLogging(LogItem logItem) {
+        logMuter.enableOutput();
+        super.assertUnexpectedLogging(logItem);
+    }
+
+    @Override
     protected void initialize() {
         logMuter = LogMuter.setupLogMuter();
         super.initialize();

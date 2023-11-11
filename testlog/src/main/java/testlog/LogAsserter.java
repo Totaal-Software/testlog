@@ -1,6 +1,5 @@
 package testlog;
 
-
 import org.hamcrest.Matcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,6 +171,17 @@ public class LogAsserter implements LogCallback, Closeable {
         }
     }
 
+    protected void assertUnexpectedLogging(LogItem logItem) {
+        String template = "Unexpected %s log during test execution with the following message: %s"
+                + "\n"
+                + "History:"
+                + "%s"
+                + "\n"
+                + "(now follows once more the stacktrace for the log item that caused this)";
+        String exceptionMessage = format(template, logItem.getLevel(), getMessageSummary(logItem), getHistory(logItem));
+        assertionError = new AssertionError(exceptionMessage, logItem.getThrowable());
+    }
+
     protected void initialize() {
         logging.registerCallback(this);
     }
@@ -187,17 +197,6 @@ public class LogAsserter implements LogCallback, Closeable {
             String format = "%d expected log entries did not occur after waiting %dms: %s";
             throw new AssertionError(format(format, count, MAXIMUM_TIME_OUT, String.join(", ", remaining)));
         }
-    }
-
-    private void assertUnexpectedLogging(LogItem logItem) {
-        String template = "Unexpected %s log during test execution with the following message: %s"
-                + "\n"
-                + "History:"
-                + "%s"
-                + "\n"
-                + "(now follows once more the stacktrace for the log item that caused this)";
-        String exceptionMessage = format(template, logItem.getLevel(), getMessageSummary(logItem), getHistory(logItem));
-        assertionError = new AssertionError(exceptionMessage, logItem.getThrowable());
     }
 
     private String getHistory(LogItem logItem) {
