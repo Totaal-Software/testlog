@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.totaalsoftware.testlog</groupId>
         <artifactId>testlog-parent</artifactId>
-        <version>1.4.0</version>
+        <version>1.4.1-SNAPSHOT</version>
     </parent>
     <artifactId>test-shared</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.1-SNAPSHOT</version>
     <name>${project.artifactId}</name>
     <description>Shared classes for test modules</description>
     <properties>
