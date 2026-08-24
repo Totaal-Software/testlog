@@ -54,6 +54,8 @@ class LogbackLogging implements Logging {
     private Appender<ILoggingEvent> getNopAppender() {
         NOPAppender<ILoggingEvent> appender = new NOPAppender<>();
         appender.setContext((Context) LoggerFactory.getILoggerFactory());
+        appender.setName("testlog-mute-nop");
+        appender.start();
         return appender;
     }
 

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.totaalsoftware.testlog</groupId>
     <artifactId>testlog-parent</artifactId>
-    <version>1.4.1-SNAPSHOT</version>
+    <version>1.4.4-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
     <description>Library to interact with logging in JUnit tests (parent project)</description>
@@ -44,13 +44,9 @@
         <url>https://travis-ci.org/Totaal-Software/testlog</url>
     </ciManagement>
     <distributionManagement>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
         <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <id>central</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
     <properties>
@@ -172,6 +168,16 @@
                     <goals>deploy</goals>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.11.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <profiles>
@@ -183,6 +189,9 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.6</version>
+                        <configuration>
+                            <keyname>A791B5CCCEE7F5BD166CC0CA464F9B1DEEC80E11</keyname>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
