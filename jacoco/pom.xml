@@ -4,10 +4,10 @@
     <parent>
         <groupId>com.totaalsoftware.testlog</groupId>
         <artifactId>testlog-parent</artifactId>
-        <version>1.4.2-SNAPSHOT</version>
+        <version>1.4.2</version>
     </parent>
     <artifactId>jacoco</artifactId>
-    <version>1.4.2-SNAPSHOT</version>
+    <version>1.4.2</version>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
     <description>JaCoCo log aggregation</description>
