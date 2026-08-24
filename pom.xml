@@ -189,6 +189,9 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.6</version>
+                        <configuration>
+                            <keyname>A791B5CCCEE7F5BD166CC0CA464F9B1DEEC80E11</keyname>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
